@@ -27,6 +27,7 @@ Tracker = "https://github.com/finsberg/pulse2/issues"
 test = [
     "pytest",
     "pytest-cov",
+    "cardiac-geometries",
 ]
 dev = [
     "pdbpp",
@@ -38,9 +39,13 @@ pypi = [
     "twine",
     "build"
 ]
+demo = [
+    "cardiac-geometries",
+]
 docs = [
    "jupyter-book",
-   "jupytext"
+   "jupytext",
+   "cardiac-geometries"
 ]
 all = [
    "pulse[test]",
