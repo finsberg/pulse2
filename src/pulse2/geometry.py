@@ -74,7 +74,7 @@ def _get_longaxis(long_axis: str | int | LongAxis) -> int:
 @dataclass(slots=True)
 class Geometry:
     mesh: dolfin.Mesh
-    markers: dict[str, tuple[int, int] | list[int]] = field(default_factory=dict)
+    markers: dict[str, tuple[int, int]] = field(default_factory=dict)
     f0: dolfin.Function | None = None
     s0: dolfin.Function | None = None
     n0: dolfin.Function | None = None
@@ -109,7 +109,11 @@ class Geometry:
                 raise RuntimeError(f"No mesh found in file {h5name}")
 
             attrs = h5file.attributes(h5group).to_dict()
-            markers = json.loads(attrs.get("markers", "{}"))
+            markers = {
+                k: (int(v[0]), int(v[1]))
+                for k, v in json.loads(attrs.get("markers", "{}")).items()
+                if len(v) == 2
+            }
             long_axis = attrs.get("long_axis", 0)
             d = mesh.geometry().dim()
 
