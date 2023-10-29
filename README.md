@@ -1,6 +1,6 @@
 [![MIT](https://img.shields.io/github/license/finsberg/pulse2)](https://github.com/finsberg/pulse2/blob/main/LICENSE)
 [![PyPI version](https://badge.fury.io/py/pulse2.svg)](https://pypi.org/project/fenicsx_pulse/)
-[![Test package](https://github.com/finsberg/pulse2/actions/workflows/test_package_coverage.yml/badge.svg)](https://github.com/finsberg/pulse2/actions/workflows/test_package_coverage.yml)
+[![Tests](https://github.com/finsberg/pulse2/actions/workflows/test.yml/badge.svg)](https://github.com/finsberg/pulse2/actions/workflows/test.yml)
 [![Pre-commit](https://github.com/finsberg/pulse2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/finsberg/pulse2/actions/workflows/pre-commit.yml)
 [![Deploy static content to Pages](https://github.com/finsberg/pulse2/actions/workflows/build_docs.yml/badge.svg)](https://github.com/finsberg/pulse2/actions/workflows/build_docs.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
