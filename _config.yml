@@ -1,0 +1,48 @@
+# Book settings
+# Learn more at https://jupyterbook.org/customize/config.html
+
+title: pulse2
+author: Henrik Finsberg
+logo: "docs/logo.png"
+copyright: "2022"
+only_build_toc_files: true
+
+# Force re-execution of notebooks on each build.
+# See https://jupyterbook.org/content/execute.html
+execute:
+  execute_notebooks: cache
+
+# Information about where the book exists on the web
+repository:
+  url: https://github.com/finsberg/pulse2 # Online location of your book
+  branch: main
+
+
+html:
+  use_issues_button: true
+  use_repository_button: true
+
+parse:
+  myst_enable_extensions:
+    - amsmath
+    - dollarmath
+    - linkify
+
+sphinx:
+  config:
+    html_theme_options:
+      navigation_with_keys: false
+    html_last_updated_fmt: "%b %d, %Y"
+    nb_custom_formats:  # https://jupyterbook.org/en/stable/file-types/jupytext.html#file-types-custom
+        .py:
+            - jupytext.reads
+            - fmt: py
+    suppress_warnings: ["mystnb.unknown_mime_type"]
+    html_js_files:
+      - https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js
+  extra_extensions:
+  - 'sphinx.ext.autodoc'
+  - 'sphinx.ext.napoleon'
+  - 'sphinx.ext.viewcode'
+
+exclude_patterns: [".pytest_cache/*", ".github/*"]

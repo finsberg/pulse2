@@ -6,7 +6,7 @@ name = "pulse2"
 version = "0.0.1"
 description = "Cardiac Mechanics simulator"
 authors = [{name = "Henrik Finsberg", email = "henriknf@simula.no"}]
-license = {name = "MIT"}
+license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["cardiac", "mechanics", "closed loop"]

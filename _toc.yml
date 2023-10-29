@@ -1,0 +1,13 @@
+format: jb-book
+root: README
+
+parts:
+  - caption: Demos
+    chapters:
+    - file: "demo/lv_pv_loop.py"
+  - caption: Community
+    chapters:
+      - file: "CONTRIBUTING"
+  - caption: Python API
+    chapters:
+    - file: "docs/api"
