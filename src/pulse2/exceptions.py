@@ -147,6 +147,29 @@ class MissingModelAttribute(AttributeError, PulseException):
         return f"Missing required attributed {self.attr!r} for model {self.model!r}"
 
 
-class MeshTagNotFoundError(PulseException):
+@dataclass
+class InvalidControl(ValueError, PulseException):
+    target_parameter: str
+    control_parameter: str
+    control_mode: str
+    msg: str
+
     def __str__(self) -> str:
-        return "No mesh tags found"
+        return (
+            f"{self.msg}\n"
+            f"target_parameter = {self.target_parameter}\n"
+            f"control_parameter = {self.control_parameter}\n"
+            f"control_mode = {self.control_mode}\n"
+        )
+
+
+@dataclass
+class InvalidMarker(KeyError, PulseException):
+    marker: str
+    valid_markers: tuple[str, ...]
+
+    def __str__(self) -> str:
+        return (
+            f"Invalid marker {self.marker}. Possible options are "
+            f"{self.valid_markers}"
+        )
