@@ -41,17 +41,19 @@ pypi = [
 ]
 demo = [
     "cardiac-geometries",
+    "ldrb"
 ]
 docs = [
    "jupyter-book",
    "jupytext",
-   "cardiac-geometries"
+   "pulse2[demo]"
 ]
 all = [
-   "pulse[test]",
-   "pulse[docs]",
-   "pulse[pypi]",
-   "pulse[dev]"
+   "pulse2[test]",
+   "pulse2[docs]",
+   "pulse2[pypi]",
+   "pulse2[demo]",
+   "pulse2[dev]"
 ]
 
 

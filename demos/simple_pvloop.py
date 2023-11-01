@@ -4,12 +4,13 @@
 # Local imports
 import logging
 import dolfin
+from pathlib import Path
 
 # from pulse2.problem import Problem
 from pulse2.itertarget import itertarget
 import pulse2
 from pulse2.geometry import LVGeometry
-from cardiac_geometries.geometry import Geometry
+import cardiac_geometries
 
 # from pulse2.material import HolzapfelOgden, Guccione
 
@@ -22,8 +23,14 @@ logger = logging.getLogger(__name__)
 comm = dolfin.MPI.comm_world
 
 # Read geometry from file. If the file is not present we regenerate it.
+geofolder = Path("lv")
+if not geofolder.is_dir():
+    cardiac_geometries.create_lv_ellipsoid(
+        geofolder,
+        create_fibers=True,
+    )
 
-geo = Geometry.from_folder("lv")
+geo = cardiac_geometries.geometry.Geometry.from_folder(geofolder)
 geo = LVGeometry(
     mesh=geo.mesh,
     markers=geo.markers,
