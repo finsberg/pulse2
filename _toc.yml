@@ -4,7 +4,7 @@ root: README
 parts:
   - caption: Demos
     chapters:
-    - file: "demos/simple_pv_loop.py"
+    - file: "demos/simple_pvloop.py"
   - caption: Community
     chapters:
       - file: "CONTRIBUTING"

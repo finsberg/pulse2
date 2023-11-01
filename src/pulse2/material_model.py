@@ -1,6 +1,5 @@
 import abc
 
-import dolfin
 import ufl_legacy as ufl
 
 from . import kinematics
@@ -9,7 +8,7 @@ from . import kinematics
 class Material(abc.ABC):
     @property
     @abc.abstractmethod
-    def parameters(self) -> dict[str, dolfin.Constant | dolfin.Function]:
+    def parameters(self):
         ...
 
     @abc.abstractmethod

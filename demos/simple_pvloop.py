@@ -37,7 +37,7 @@ geo = LVGeometry(
 geo.mesh.coordinates()[:] /= 3
 
 material_params = pulse2.HolzapfelOgden.transversely_isotropic_parameters()
-material = pulse2.HolzapfelOgden(f0=geo.f0, s0=geo.s0, **material_params)
+material = pulse2.HolzapfelOgden(f0=geo.f0, s0=geo.s0, parameters=material_params)
 
 Ta = dolfin.Constant(0.0)
 active_model = pulse2.ActiveStress(geo.f0, activation=Ta)
