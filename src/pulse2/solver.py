@@ -4,7 +4,7 @@ __all__ = ["Solver"]
 
 
 class Solver:
-    __slots__ = ("solver",)
+    __slots__ = ("solver", "_snes")
 
     def __init__(self, use_snes=True, max_iterations=50):
         self.reset(use_snes, max_iterations=max_iterations)
@@ -14,6 +14,9 @@ class Solver:
         problem._prev_residual = 1.0
         problem._recompute_jacobian = True
         result = self.solver.solve(problem, problem.state.vector())
+
+        # residuals = self._snes.getConvergenceHistory()[0]
+        # num_iterations = self._snes.getLinearSolveIterations()
         return result
 
     def reset(self, use_snes=True, max_iterations=50):
@@ -23,8 +26,13 @@ class Solver:
         dolfin.PETScOptions.set("mat_mumps_icntl_7", 6)
         if use_snes:
             solver = dolfin.PETScSNESSolver()
+            # self._snes = solver.snes()
+            # self._snes.setConvergenceHistory()
             solver.parameters["report"] = False
-            dolfin.PETScOptions.set("snes_monitor")
+            solver.parameters["lu_solver"]["report"] = False
+            solver.parameters["lu_solver"]["verbose"] = False
+            # breakpoint()
+            # dolfin.PETScOptions.set("snes_monitor")
         else:
             solver = dolfin.NewtonSolver()
 

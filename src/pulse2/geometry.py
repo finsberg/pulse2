@@ -83,6 +83,7 @@ class Geometry:
     ffun: dolfin.MeshFunction | None = None
     rfun: dolfin.MeshFunction | None = None
     vfun: dolfin.MeshFunction | None = None
+    _endoring_offset: float = field(init=False, repr=False)
 
     def __post_init__(self):
         self._endoring_offset = self.compute_endoring_offset()

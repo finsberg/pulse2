@@ -11,6 +11,7 @@ __program_name__ = meta["Name"]
 from . import kinematics
 from . import invariants
 from . import material_model
+from .material_model import Material
 from .material_model import HyperElasticMaterial
 from . import compressibility
 from .compressibility import Compressible, Incompressible
@@ -30,6 +31,7 @@ from . import problem
 from .problem import LVProblem, ControlMode
 from . import solver
 from .solver import Solver
+from . import itertarget
 
 __all__ = [
     "kinematics",
@@ -61,4 +63,5 @@ __all__ = [
     "solver",
     "ControlMode",
     "Solver",
+    "itertarget",
 ]

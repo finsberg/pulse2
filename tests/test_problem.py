@@ -1,9 +1,11 @@
+import pytest
 import dolfin
 import pulse2
 import numpy as np
 
 
-def test_LVProblem_fix_base(lvgeo):
+@pytest.mark.parametrize("bc_type", pulse2.problem.BCType)
+def test_LVProblem(lvgeo, bc_type):
     geo = pulse2.LVGeometry(
         mesh=lvgeo.mesh,
         markers=lvgeo.markers,
@@ -15,12 +17,10 @@ def test_LVProblem_fix_base(lvgeo):
     )
 
     material_params = pulse2.HolzapfelOgden.transversely_isotropic_parameters()
-    f0 = dolfin.Constant((1.0, 0.0, 0.0))
-    s0 = dolfin.Constant((0.0, 1.0, 0.0))
-    material = pulse2.HolzapfelOgden(f0=f0, s0=s0, **material_params)
+    material = pulse2.HolzapfelOgden(f0=geo.f0, s0=geo.s0, **material_params)
 
     Ta = dolfin.Constant(0.0)
-    active_model = pulse2.ActiveStress(f0, activation=Ta)
+    active_model = pulse2.ActiveStress(geo.f0, activation=Ta)
     comp_model = pulse2.Incompressible()
 
     model = pulse2.CardiacModel(
@@ -45,13 +45,13 @@ def test_LVProblem_fix_base(lvgeo):
     # )
 
     problem = pulse2.LVProblem(
-        model=model, geometry=geo, parameters={"bc_type": "fix_base"}
+        model=model, geometry=geo, parameters={"bc_type": bc_type}
     )
     solver = pulse2.Solver()
     result = solver.solve(problem)
     assert result[-1]
 
-    u0, p0 = problem.state.split(deepcopy=True)
+    u0, p0, *extra = problem.state.split(deepcopy=True)
 
     # With the HolzapfelOgden model the hydrostatic pressure
     # should equal the negative of the material parameter a
@@ -65,7 +65,7 @@ def test_LVProblem_fix_base(lvgeo):
     result = solver.solve(problem)
     assert result[-1]
 
-    u1, p1 = problem.state.split(deepcopy=True)
+    u1, p1, *extra1 = problem.state.split(deepcopy=True)
     # And both values should now be changed
     assert not np.allclose(u1.vector().get_local(), 0.0)
     assert not np.allclose(p1.vector().get_local(), -material_params["a"])
@@ -80,13 +80,13 @@ def test_LVProblem_fix_base(lvgeo):
     result = solver.solve(problem)
     assert result[-1]
 
-    u2, p2, pendo2 = problem.state.split(deepcopy=True)
+    u2, p2, *extra2 = problem.state.split(deepcopy=True)
     vol2 = geo.inner_volume(u1)
     # In this case everything should be the same
     assert np.allclose(u1.vector().get_local(), u2.vector().get_local())
     assert np.allclose(p1.vector().get_local(), p2.vector().get_local())
     # And the pressure should be the same
-    assert np.allclose(pendo2.vector().get_local(), pendo)
+    assert np.allclose(extra2[-1].vector().get_local(), pendo)
     # And the volume should be the same
     assert np.isclose(vol1, vol2)
 
@@ -96,12 +96,12 @@ def test_LVProblem_fix_base(lvgeo):
     problem.set_control_parameter("gamma", 0.1)
     result = solver.solve(problem)
     assert result[-1]
-    u3, p3, pendo3 = problem.state.split(deepcopy=True)
+    u3, p3, *extra3 = problem.state.split(deepcopy=True)
     vol3 = geo.inner_volume(u1)
     # The volume should be the same
     assert np.isclose(vol2, vol3)
     # But the pressure should be increased
-    assert (pendo3.vector().get_local() > pendo).all()
+    assert (extra3[-1].vector().get_local() > pendo).all()
 
     # u and p should also be different
     assert not np.allclose(u1.vector().get_local(), u3.vector().get_local())

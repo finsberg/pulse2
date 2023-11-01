@@ -9,6 +9,7 @@ import ufl_legacy as ufl
 
 from .cardiac_model import CardiacModel
 from .geometry import Geometry
+from .exceptions import InvalidMarker
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,6 @@ class ControlMode(Enum):
 class BCType(Enum):
     fix_base = "fix_base"
     fix_base_ver = "fix_base_ver"
-    fix_endoring = "fix_endoring"
     free = "free"
 
 
@@ -32,7 +32,7 @@ class LVProblem(dolfin.NonlinearProblem):
     geometry: Geometry
     parameters: dict[str, typing.Any] = field(default_factory=dict)
 
-    _virtual_work: ufl.form.Form = field(init=False, repr=False)
+    _virtual_work: ufl.Form = field(init=False, repr=False)
     _control_mode: ControlMode = field(
         init=False, repr=False, default=ControlMode.pressure
     )
@@ -40,9 +40,9 @@ class LVProblem(dolfin.NonlinearProblem):
     _recompute_jacobian: bool = field(init=False, repr=False, default=True)
     _first_iteration: bool = field(init=False, repr=False, default=True)
     _Mspace: dolfin.FunctionSpace = field(init=False, repr=False)
-    state: dolfin.FunctionSpace = field(init=False, repr=False)
-    _G: ufl.form.Form = field(init=False, repr=False)
-    _dG: ufl.form.Form = field(init=False, repr=False)
+    state: dolfin.Function = field(init=False, repr=False)
+    _G: ufl.Form = field(init=False, repr=False)
+    _dG: ufl.Form = field(init=False, repr=False)
     _bcs: list[dolfin.DirichletBC] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -94,23 +94,6 @@ class LVProblem(dolfin.NonlinearProblem):
                 + f"ratio: {residual_ratio:e}"
             )
         self._prev_residual = residual
-
-    def smorm(self, A, b, x):
-        ffc_param = self.parameters["form_compiler_parameters"]
-        if self._assemble_jacobian:
-            dolfin.assemble_system(
-                self._dG,
-                self._G,
-                self._bcs,
-                A_tensor=A,
-                b_tensor=b,
-                form_compiler_parameters=ffc_param,
-            )
-        else:
-            dolfin.assemble(self._G, tensor=b, form_compiler_parameters=ffc_param)
-            for bc in self._bcs:
-                bc.apply(b)
-        self._assemble_jacobian = not self._assemble_jacobian
 
     def J(self, A, x):
         ffc_params = self.parameters["form_compiler_parameters"]
@@ -179,45 +162,7 @@ class LVProblem(dolfin.NonlinearProblem):
 
         # bcs
         # ---
-        if param["bc_type"] == BCType.fix_base_ver:
-            c = ufl.split(state)[2]
-
-            # No translations in plane of the base
-            if geo.long_axis == 0:
-                ct = ufl.as_vector([0.0, c[0], c[1]])
-            elif geo.long_axis == 1:
-                ct = ufl.as_vector([c[0], 0.0, c[1]])
-            else:
-                ct = ufl.as_vector([c[0], c[1], 0.0])
-
-            # No rotations around the long axis
-            cr = [0.0, 0.0, 0.0]
-            cr[geo.long_axis] = c[2]
-            cr = ufl.as_vector(cr)
-            L += self._rigid_motion_constraint(u, ct, cr)
-
-            # No vertical displacement at the base
-            Vsp = self._Mspace.sub(0).sub(geo.long_axis)
-            bcs = [
-                dolfin.DirichletBC(
-                    Vsp, dolfin.Constant(0.0), geo.ffun, geo.markers["BASE"][0]
-                )
-            ]
-
-        elif param["bc_type"] == BCType.fix_base:
-            # No displacement at the base
-            Vsp = self._Mspace.sub(0)
-            bcs = [
-                dolfin.DirichletBC(
-                    Vsp,
-                    dolfin.Constant((0.0, 0.0, 0.0)),
-                    geo.ffun,
-                    geo.markers["BASE"][0],
-                )
-            ]
-
-        else:
-            raise NotImplementedError
+        bcs, L = self._handle_bcs(L, u, param["bc_type"])
 
         # tangent problem
         # ---------------
@@ -227,6 +172,76 @@ class LVProblem(dolfin.NonlinearProblem):
         self._G = ufl.derivative(L, self.state, ufl.TestFunction(self._Mspace))
         self._dG = ufl.derivative(self._G, self.state, ufl.TrialFunction(self._Mspace))
         self._bcs = bcs
+
+    def _handle_bcs(
+        self, L, u, bc_type: BCType
+    ) -> tuple[list[dolfin.DirichletBC], ufl.Form]:
+        if bc_type == BCType.fix_base_ver:
+            if "BASE" not in self.geometry.markers:
+                raise InvalidMarker(
+                    marker="BASE", valid_markers=tuple(self.geometry.markers.keys())
+                )
+            c = ufl.split(self.state)[2]
+
+            # No translations in plane of the base
+            if self.geometry.long_axis == 0:
+                ct = ufl.as_vector([0.0, c[0], c[1]])
+            elif self.geometry.long_axis == 1:
+                ct = ufl.as_vector([c[0], 0.0, c[1]])
+            else:
+                ct = ufl.as_vector([c[0], c[1], 0.0])
+
+            # No rotations around the long axis
+            cr = [0.0, 0.0, 0.0]
+            cr[self.geometry.long_axis] = c[2]
+            cr = ufl.as_vector(cr)
+            L += self._rigid_motion_constraint(u, ct, cr)
+
+            # No vertical displacement at the base
+            Vsp = self._Mspace.sub(0).sub(self.geometry.long_axis)
+            bcs = [
+                dolfin.DirichletBC(
+                    Vsp,
+                    dolfin.Constant(0.0),
+                    self.geometry.ffun,
+                    self.geometry.markers["BASE"][0],
+                )
+            ]
+
+        elif bc_type == BCType.fix_base:
+            if "BASE" not in self.geometry.markers:
+                raise InvalidMarker(
+                    marker="BASE", valid_markers=tuple(self.geometry.markers.keys())
+                )
+            # No displacement at the base
+            Vsp = self._Mspace.sub(0)
+            bcs = [
+                dolfin.DirichletBC(
+                    Vsp,
+                    dolfin.Constant((0.0, 0.0, 0.0)),
+                    self.geometry.ffun,
+                    self.geometry.markers["BASE"][0],
+                )
+            ]
+
+        elif bc_type == BCType.free:
+            X = self.geometry.X
+            r = ufl.split(self.state)[2]
+            RM = [
+                dolfin.Constant((1, 0, 0)),
+                dolfin.Constant((0, 1, 0)),
+                dolfin.Constant((0, 0, 1)),
+                dolfin.cross(X, dolfin.Constant((1, 0, 0))),
+                dolfin.cross(X, dolfin.Constant((0, 1, 0))),
+                dolfin.cross(X, dolfin.Constant((0, 0, 1))),
+            ]
+            bcs = []
+            L += sum(dolfin.dot(u, zi) * r[i] * dolfin.dx for i, zi in enumerate(RM))
+
+        else:
+            raise NotImplementedError
+
+        return bcs, L
 
     def _inner_volume_constraint(self, u, pendo, V, sigma):
         """
@@ -316,8 +331,10 @@ class LVProblem(dolfin.NonlinearProblem):
         return self._control_mode
 
     @control_mode.setter
-    def control_mode(self, mode: ControlMode) -> None:
+    def control_mode(self, mode: ControlMode | str) -> None:
         """Set the control model 'pressure' or 'volume'"""
+        if isinstance(mode, str):
+            mode = ControlMode[mode]
         self._change_mode_and_reinit(mode)
 
     def _change_mode_and_reinit(self, control_mode: ControlMode) -> None:
@@ -339,7 +356,7 @@ class LVProblem(dolfin.NonlinearProblem):
         dolfin.assign(self.state.sub(0), state_old.sub(0))
         dolfin.assign(self.state.sub(1), state_old.sub(1))
 
-        if self.parameters["bc_type"] not in [BCType.fix_endoring, BCType.fix_base]:
+        if self.parameters["bc_type"] not in [BCType.fix_base]:
             dolfin.assign(self.state.sub(2), state_old.sub(2))
 
         self.pendo = pendo_old
@@ -361,7 +378,7 @@ class LVProblem(dolfin.NonlinearProblem):
     @property
     def pendo(self):
         """Return the value of the endo pressure"""
-        if self._control_mode == "volume":
+        if self._control_mode == ControlMode.volume:
             pnum = self._Mspace.num_sub_spaces() - 1
             return self.get_real_space_value(pnum)
         else:
@@ -370,7 +387,7 @@ class LVProblem(dolfin.NonlinearProblem):
     @pendo.setter
     def pendo(self, p):
         """Set the value of the endo pressure"""
-        if self._control_mode == "volume":
+        if self._control_mode == ControlMode.volume:
             pnum = self._Mspace.num_sub_spaces() - 1
             self.set_real_space_value(pnum, p)
         else:
@@ -399,7 +416,7 @@ class LVProblem(dolfin.NonlinearProblem):
         """Set the value of a given control parameters"""
         # Volume or pressure parameters
         if name in ["pressure", "volume"]:
-            if name != self._control_mode:
+            if name != self.control_mode.value:
                 logger.error(
                     "Problem is in {} control mode. "
                     "Cannot use {} as control.".format(self._control_mode, name)
