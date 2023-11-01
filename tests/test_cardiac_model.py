@@ -6,10 +6,9 @@ import ufl_legacy as ufl
 
 
 def test_CardiacModel(mesh, u):
-    material_params = pulse2.HolzapfelOgden.transversely_isotropic_parameters()
     f0 = dolfin.Constant((1.0, 0.0, 0.0))
     s0 = dolfin.Constant((0.0, 1.0, 0.0))
-    material = pulse2.HolzapfelOgden(f0=f0, s0=s0, **material_params)
+    material = pulse2.HolzapfelOgden(f0=f0, s0=s0)
 
     active_model = pulse2.ActiveStress(f0)
     comp_model = pulse2.Compressible()

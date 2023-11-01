@@ -1,3 +1,4 @@
+from __future__ import annotations
 import typing
 from dataclasses import dataclass
 from dataclasses import field
@@ -14,6 +15,21 @@ from . import invariants
 from .material_model import HyperElasticMaterial
 
 
+class HolzapfelOgdenParameters(typing.TypedDict):
+    a: float | dolfin.Function | dolfin.Constant
+    b: float | dolfin.Function | dolfin.Constant
+    a_f: float | dolfin.Function | dolfin.Constant
+    b_f: float | dolfin.Function | dolfin.Constant
+    a_s: float | dolfin.Function | dolfin.Constant
+    b_s: float | dolfin.Function | dolfin.Constant
+    a_fs: float | dolfin.Function | dolfin.Constant
+    b_fs: float | dolfin.Function | dolfin.Constant
+
+
+def default_parameters() -> HolzapfelOgdenParameters:
+    return HolzapfelOgden.transversely_isotropic_parameters()
+
+
 @dataclass(slots=True)
 class HolzapfelOgden(HyperElasticMaterial):
     r"""
@@ -25,28 +41,31 @@ class HolzapfelOgden(HyperElasticMaterial):
         Function representing the direction of the fibers
     s0: dolfin.Function | dolfin.Constant | None
         Function representing the direction of the sheets
-    a: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
-    b: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
-    a_f: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
-    b_f: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
-    a_s: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
-    b_s: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
-    a_fs: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
-    b_fs: float | dolfin.Function | dolfin.Constant
-        Material parameter, by default 0.0
     use_subplus: bool
         Use subplus function when computing anisotropic contribution,
         by default True
     use_heaviside: bool
         Use heaviside function when computing anisotropic contribution,
         by default True
+    parameters : dict[str, float | dolfin.Function | dolfin.Constant]
+        Parameters in the model. Possible values are
+
+            a: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
+            b: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
+            a_f: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
+            b_f: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
+            a_s: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
+            b_s: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
+            a_fs: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
+            b_fs: float | dolfin.Function | dolfin.Constant
+                Material parameter, by default 0.0
 
     Notes
     -----
@@ -88,14 +107,7 @@ class HolzapfelOgden(HyperElasticMaterial):
     """
     f0: dolfin.Function | dolfin.Constant | None = None
     s0: dolfin.Function | dolfin.Constant | None = None
-    a: float | dolfin.Function | dolfin.Constant = 0.0
-    b: float | dolfin.Function | dolfin.Constant = 0.0
-    a_f: float | dolfin.Function | dolfin.Constant = 0.0
-    b_f: float | dolfin.Function | dolfin.Constant = 0.0
-    a_s: float | dolfin.Function | dolfin.Constant = 0.0
-    b_s: float | dolfin.Function | dolfin.Constant = 0.0
-    a_fs: float | dolfin.Function | dolfin.Constant = 0.0
-    b_fs: float | dolfin.Function | dolfin.Constant = 0.0
+    parameters: HolzapfelOgdenParameters = field(default_factory=default_parameters)
     use_subplus: bool = field(default=True, repr=False)
     use_heaviside: bool = field(default=True, repr=False)
 
@@ -129,19 +141,23 @@ class HolzapfelOgden(HyperElasticMaterial):
     )
 
     def __post_init__(self):
+        params = type(self).transversely_isotropic_parameters()
+        params.update(self.parameters)
+        self.parameters = params
         # Check that all values are positive
-        for attr in ["a", "b", "a_f", "b_f", "a_s", "a_s", "a_fs", "b_fs"]:
+
+        for name in self.parameters.keys():
             if not exceptions.check_value_greater_than(
-                getattr(self, attr),
+                self.parameters[name],
                 0.0,
                 inclusive=True,
             ):
                 raise exceptions.InvalidRangeError(
-                    name=attr,
+                    name=name,
                     expected_range=(0.0, np.inf),
                 )
-            if isinstance((v := getattr(self, attr)), float):
-                setattr(self, attr, dolfin.Constant(v))
+            if isinstance((v := self.parameters[name]), float):
+                self.parameters[name] = dolfin.Constant(v)
 
         if self.f0 is not None:
             self._I4f = partial(invariants.I4, a0=self.f0)
@@ -159,31 +175,22 @@ class HolzapfelOgden(HyperElasticMaterial):
             self._I8fs = lambda x: 0.0
 
         self._W1_func = self._resolve_W1()
-        self._W4f_func = self._resolve_W4(a=self.a_f, b=self.b_f, required_attr="f0")
-        self._W4s_func = self._resolve_W4(a=self.a_s, b=self.b_s, required_attr="s0")
+        self._W4f_func = self._resolve_W4(
+            a=self.parameters["a_f"], b=self.parameters["b_f"], required_attr="f0"
+        )
+        self._W4s_func = self._resolve_W4(
+            a=self.parameters["a_s"], b=self.parameters["b_s"], required_attr="s0"
+        )
         self._W8fs_func = self._resolve_W8fs()
 
-    @property
-    def parameters(self) -> dict[str, float | dolfin.Constant | dolfin.Function]:
-        return {
-            "a": self.a,
-            "b": self.b,
-            "a_f": self.a_f,
-            "b_f": self.b_f,
-            "a_s": self.a_s,
-            "b_s": self.b_s,
-            "a_fs": self.a_fs,
-            "b_fs": self.b_fs,
-        }
-
     def _resolve_W1(self):
-        if exceptions.check_value_greater_than(self.a, 1e-10):
-            if exceptions.check_value_greater_than(self.b, 1e-10):
-                return lambda I1: (self.a / (2.0 * self.b)) * (
-                    ufl.exp(self.b * (I1 - 3)) - 1.0
-                )
+        if exceptions.check_value_greater_than(self.parameters["a"], 1e-10):
+            if exceptions.check_value_greater_than(self.parameters["b"], 1e-10):
+                return lambda I1: (
+                    self.parameters["a"] / (2.0 * self.parameters["b"])
+                ) * (ufl.exp(self.parameters["b"] * (I1 - 3)) - 1.0)
             else:
-                return lambda I1: (self.a / 2.0) * (I1 - 3)
+                return lambda I1: (self.parameters["a"] / 2.0) * (I1 - 3)
         else:
             return lambda I1: 0.0
 
@@ -209,25 +216,25 @@ class HolzapfelOgden(HyperElasticMaterial):
             return lambda I4: 0.0
 
     def _resolve_W8fs(self):
-        if exceptions.check_value_greater_than(self.a_fs, 1e-10):
+        if exceptions.check_value_greater_than(self.parameters["a_fs"], 1e-10):
             if self.f0 is None or self.s0 is None:
                 raise exceptions.MissingModelAttribute(
                     attr="f0 and/or s0",
                     model=type(self).__name__,
                 )
-            if exceptions.check_value_greater_than(self.b_fs, 1e-10):
+            if exceptions.check_value_greater_than(self.parameters["b_fs"], 1e-10):
                 return (
-                    lambda I8: self.a_fs
-                    / (2.0 * self.b_fs)
-                    * (ufl.exp(self.b_fs * I8**2) - 1.0)
+                    lambda I8: self.parameters["a_fs"]
+                    / (2.0 * self.parameters["b_fs"])
+                    * (ufl.exp(self.parameters["b_fs"] * I8**2) - 1.0)
                 )
             else:
-                return lambda I8: self.a_fs / 2.0 * I8**2
+                return lambda I8: self.parameters["a_fs"] / 2.0 * I8**2
         else:
             return lambda I8: 0.0
 
     @staticmethod
-    def transversely_isotropic_parameters() -> dict[str, float]:
+    def transversely_isotropic_parameters() -> HolzapfelOgdenParameters:
         """
         Material parameters for the Holzapfel Ogden model
         Taken from Table 1 row 3 in the main paper
@@ -245,7 +252,7 @@ class HolzapfelOgden(HyperElasticMaterial):
         }
 
     @staticmethod
-    def partly_orthotropic_parameters() -> dict[str, float]:
+    def partly_orthotropic_parameters() -> HolzapfelOgdenParameters:
         """
         Material parameters for the Holzapfel Ogden model
         Taken from Table 1 row 1 in the main paper
@@ -263,7 +270,7 @@ class HolzapfelOgden(HyperElasticMaterial):
         }
 
     @staticmethod
-    def orthotropic_parameters() -> dict[str, float]:
+    def orthotropic_parameters() -> HolzapfelOgdenParameters:
         """
         Material parameters for the Holzapfel Ogden model
         Taken from Table 1 row 2 in the main paper

@@ -13,7 +13,7 @@ def test_linear_elastic_model(obj_str, mesh, P1, u) -> None:
     E = 2.0
     _nu = 0.2
     nu = utils.float2object(f=_nu, obj_str=obj_str, V=P1)
-    model = pulse2.LinearElastic(E=E, nu=nu)
+    model = pulse2.LinearElastic(parameters={"E": E, "nu": nu})
 
     u.interpolate(dolfin.Expression(("x[0]", "x[1]", "x[2]"), degree=1))
     F = pulse2.kinematics.DeformationGradient(u)
@@ -33,7 +33,7 @@ def test_linear_elastic_model_with_invalid_range(obj_str, P1) -> None:
     nu = utils.float2object(f=_nu, obj_str=obj_str, V=P1)
 
     with pytest.raises(pulse2.exceptions.InvalidRangeError):
-        pulse2.LinearElastic(E=E, nu=nu)
+        pulse2.LinearElastic(parameters={"E": E, "nu": nu})
 
 
 @pytest.mark.parametrize(
@@ -51,7 +51,7 @@ def test_holzapfel_ogden(params_func, expected_value, mesh, u) -> None:
     params = params_func()
     f0 = dolfin.Constant((1.0, 0.0, 0.0))
     s0 = dolfin.Constant((0.0, 1.0, 0.0))
-    model = pulse2.HolzapfelOgden(f0=f0, s0=s0, **params)
+    model = pulse2.HolzapfelOgden(f0=f0, s0=s0, parameters=params)
 
     u.interpolate(
         dolfin.Expression(("x[0] / 10.0", "x[1] / 10.0", "x[2] / 10.0"), degree=1)
@@ -63,9 +63,24 @@ def test_holzapfel_ogden(params_func, expected_value, mesh, u) -> None:
     assert math.isclose(value, expected_value)
 
 
-def test_holzapfel_ogden_invalid_range():
+@pytest.fixture
+def zero_holzapfel_ogden_parameters() -> pulse2.holzapfelogden.HolzapfelOgdenParameters:
+    return {
+        "a": 0.0,
+        "b": 0.0,
+        "a_f": 0.0,
+        "b_f": 0.0,
+        "a_s": 0.0,
+        "b_s": 0.0,
+        "a_fs": 0.0,
+        "b_fs": 0.0,
+    }
+
+
+def test_holzapfel_ogden_invalid_range(zero_holzapfel_ogden_parameters):
+    zero_holzapfel_ogden_parameters["a"] = -1.0
     with pytest.raises(pulse2.exceptions.InvalidRangeError):
-        pulse2.HolzapfelOgden(a=-1.0)
+        pulse2.HolzapfelOgden(parameters=zero_holzapfel_ogden_parameters)
 
 
 @pytest.mark.parametrize(
@@ -76,17 +91,22 @@ def test_holzapfel_ogden_invalid_range():
         ({"a_fs": 1}, "f0 and/or s0"),
     ),
 )
-def test_holzapfel_ogden_raises_MissingModelAttribute(params, attr):
+def test_holzapfel_ogden_raises_MissingModelAttribute(
+    params, attr, zero_holzapfel_ogden_parameters
+):
+    zero_holzapfel_ogden_parameters.update(params)
+
     with pytest.raises(pulse2.exceptions.MissingModelAttribute) as e:
-        pulse2.HolzapfelOgden(**params)
+        pulse2.HolzapfelOgden(parameters=zero_holzapfel_ogden_parameters)
     assert e.value == pulse2.exceptions.MissingModelAttribute(
         attr=attr,
         model="HolzapfelOgden",
     )
 
 
-def test_holzapfel_ogden_neohookean(u):
-    model = pulse2.HolzapfelOgden(a=1.0)
+def test_holzapfel_ogden_neohookean(u, zero_holzapfel_ogden_parameters):
+    zero_holzapfel_ogden_parameters["a"] = 1.0
+    model = pulse2.HolzapfelOgden(parameters=zero_holzapfel_ogden_parameters)
     u.interpolate(
         dolfin.Expression(("x[0] / 10.0", "x[1] / 10.0", "x[2] / 10.0"), degree=1)
     )
@@ -98,9 +118,10 @@ def test_holzapfel_ogden_neohookean(u):
     assert math.isclose(value, 0.315)
 
 
-def test_holzapfel_ogden_pure_fiber(u, mesh):
+def test_holzapfel_ogden_pure_fiber(u, zero_holzapfel_ogden_parameters):
+    zero_holzapfel_ogden_parameters["a_f"] = 1.0
     f0 = dolfin.Constant((1.0, 0.0, 0.0))
-    model = pulse2.HolzapfelOgden(a_f=1.0, f0=f0)
+    model = pulse2.HolzapfelOgden(parameters=zero_holzapfel_ogden_parameters, f0=f0)
     u.interpolate(
         dolfin.Expression(("x[0] / 10.0", "x[1] / 10.0", "x[2] / 10.0"), degree=1)
     )
@@ -112,9 +133,12 @@ def test_holzapfel_ogden_pure_fiber(u, mesh):
     assert math.isclose(value, 0.5 * 0.21**2)
 
 
-def test_holzapfel_ogden_pure_fiber_sheets(u, mesh):
+def test_holzapfel_ogden_pure_fiber_sheets(u, zero_holzapfel_ogden_parameters):
+    zero_holzapfel_ogden_parameters["a_fs"] = 1.0
     f0 = dolfin.Constant((1.0, 0.0, 0.0))
-    model = pulse2.HolzapfelOgden(a_fs=1.0, f0=f0, s0=f0)
+    model = pulse2.HolzapfelOgden(
+        parameters=zero_holzapfel_ogden_parameters, f0=f0, s0=f0
+    )
     u.interpolate(
         dolfin.Expression(("x[0] / 10.0", "x[1] / 10.0", "x[2] / 10.0"), degree=1)
     )

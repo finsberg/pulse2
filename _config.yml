@@ -4,13 +4,14 @@
 title: pulse2
 author: Henrik Finsberg
 logo: "docs/logo.png"
-copyright: "2022"
+copyright: "2023"
 only_build_toc_files: true
 
 # Force re-execution of notebooks on each build.
 # See https://jupyterbook.org/content/execute.html
 execute:
   execute_notebooks: cache
+  timeout: 30000
 
 # Information about where the book exists on the web
 repository:
@@ -30,6 +31,7 @@ parse:
 
 sphinx:
   config:
+    nb_execution_show_tb: True
     html_theme_options:
       navigation_with_keys: false
     html_last_updated_fmt: "%b %d, %Y"
