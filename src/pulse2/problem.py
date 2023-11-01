@@ -95,23 +95,6 @@ class LVProblem(dolfin.NonlinearProblem):
             )
         self._prev_residual = residual
 
-    def smorm(self, A, b, x):
-        ffc_param = self.parameters["form_compiler_parameters"]
-        if self._assemble_jacobian:
-            dolfin.assemble_system(
-                self._dG,
-                self._G,
-                self._bcs,
-                A_tensor=A,
-                b_tensor=b,
-                form_compiler_parameters=ffc_param,
-            )
-        else:
-            dolfin.assemble(self._G, tensor=b, form_compiler_parameters=ffc_param)
-            for bc in self._bcs:
-                bc.apply(b)
-        self._assemble_jacobian = not self._assemble_jacobian
-
     def J(self, A, x):
         ffc_params = self.parameters["form_compiler_parameters"]
         if (
@@ -395,7 +378,7 @@ class LVProblem(dolfin.NonlinearProblem):
     @property
     def pendo(self):
         """Return the value of the endo pressure"""
-        if self._control_mode == "volume":
+        if self._control_mode == ControlMode.volume:
             pnum = self._Mspace.num_sub_spaces() - 1
             return self.get_real_space_value(pnum)
         else:
@@ -404,7 +387,7 @@ class LVProblem(dolfin.NonlinearProblem):
     @pendo.setter
     def pendo(self, p):
         """Set the value of the endo pressure"""
-        if self._control_mode == "volume":
+        if self._control_mode == ControlMode.volume:
             pnum = self._Mspace.num_sub_spaces() - 1
             self.set_real_space_value(pnum, p)
         else:
@@ -433,7 +416,7 @@ class LVProblem(dolfin.NonlinearProblem):
         """Set the value of a given control parameters"""
         # Volume or pressure parameters
         if name in ["pressure", "volume"]:
-            if name != self._control_mode:
+            if name != self.control_mode.value:
                 logger.error(
                     "Problem is in {} control mode. "
                     "Cannot use {} as control.".format(self._control_mode, name)
