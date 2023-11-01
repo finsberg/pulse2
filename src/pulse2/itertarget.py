@@ -162,26 +162,6 @@ def itertarget(
     where g is implicitly defined as the target value for a given
     control value.
 
-    *Arguments*
-      problem (:py:class:`pulse.LVProblem`)
-
-      data_collector (:py:class:`pulse.DataCollector`)
-
-      target_end (float)
-
-      target_parameters (str)
-
-      control_step (float)
-
-      control_parameter (str)
-
-      control_mode (str)
-
-      tol (float)
-
-      adapt_step (bool)
-
-
     Parameters
     ----------
     problem : LVProblem
@@ -208,16 +188,6 @@ def itertarget(
     max_adapt_iter : int, optional
         _description_, by default 7
 
-    Raises
-    ------
-    InvalidControl
-        _description_
-    InvalidControl
-        _description_
-    InvalidControl
-        _description_
-    RuntimeError
-        _description_
     """
 
     target_is_control = target_parameter == control_parameter

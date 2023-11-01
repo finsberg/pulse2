@@ -102,6 +102,22 @@ def test_itertarget_modes(
         assert np.isclose(Vendo_old, Vendo_new)
 
 
+@pytest.mark.parametrize("control_step", (None, 0.1, 0.01, 0.2))
+def test_itertarget_control_step(control_step, problem):
+    target_old = problem.get_control_parameter("pressure")
+    target_end = 0.1
+    pulse2.itertarget.itertarget(
+        problem=problem,
+        target_end=target_end,
+        target_parameter="pressure",
+        control_step=control_step,
+    )
+    target_new = problem.get_control_parameter("pressure")
+
+    assert np.isclose(target_old, 0.0)
+    assert np.isclose(target_new, target_end)
+
+
 @pytest.mark.parametrize(
     "target_value, target_end, tol, expected",
     (
