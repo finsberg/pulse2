@@ -30,6 +30,7 @@ parse:
 
 sphinx:
   config:
+    nb_execution_show_tb: True
     html_theme_options:
       navigation_with_keys: false
     html_last_updated_fmt: "%b %d, %Y"

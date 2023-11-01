@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 comm = dolfin.MPI.comm_world
 
-
 # Read geometry from file. If the file is not present we regenerate it.
 
 geo = Geometry.from_folder("lv")
