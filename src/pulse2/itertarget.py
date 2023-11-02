@@ -311,7 +311,7 @@ def itertarget(
 
         # Correction step
         # ---------------
-        logger.info(
+        logger.debug(
             "\nTRYING NEW CONTROL VALUE: {}={}{}\ntarget: {}={}, "
             'control parameter: "{}", control_mode: "{}"'.format(
                 control_parameter,
@@ -330,7 +330,7 @@ def itertarget(
             if not nlconv:
                 raise RuntimeError("Solver did not converge...")
         except RuntimeError:
-            logger.info("\nNOT CONVERGING")
+            logger.debug("\nNOT CONVERGING")
 
             # Reset solution
             reset_problem_state(problem=problem, state_old=state_old)
@@ -338,7 +338,7 @@ def itertarget(
 
             # Reduce step
             control_step *= 0.5
-            logger.info(f"REDUCING control_step = {control_step}")
+            logger.debug(f"REDUCING control_step = {control_step}")
             continue
 
         # Get target value
@@ -352,7 +352,7 @@ def itertarget(
             target_end=target_end,
             target_value_old=target_value_old,
         ):
-            logger.info("STEPPING IN WRONG DIRECTION")
+            logger.debug("STEPPING IN WRONG DIRECTION")
 
             # Reset solution
             reset_problem_state(problem=problem, state_old=state_old)
@@ -367,7 +367,7 @@ def itertarget(
         # Adapt control_step
         if not iterating and nliter < max_adapt_iter and adapt_step:
             control_step *= 2.0
-            logger.info(f"INCREASING control_step = {control_step}")
+            logger.debug(f"INCREASING control_step = {control_step}")
 
         # Check if target has been reached
 
@@ -392,7 +392,9 @@ def itertarget(
                 prev_states[-1].vector().zero()
                 prev_states[-1].vector().axpy(1.0, problem.state.vector())
 
-            logger.info(f"SUCCESFULL STEP: pendo={problem.pendo} Vendo={problem.Vendo}")
+            logger.info(
+                f"SUCCESFULL STEP: pendo={problem.pendo:.3f} Vendo={problem.Vendo:.3f}"
+            )
 
         # output
         if data_collector:

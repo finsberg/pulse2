@@ -32,6 +32,7 @@ from .problem import LVProblem, ControlMode
 from . import solver
 from .solver import Solver
 from . import itertarget
+from . import config
 
 __all__ = [
     "kinematics",
@@ -64,4 +65,5 @@ __all__ = [
     "ControlMode",
     "Solver",
     "itertarget",
+    "config",
 ]
