@@ -73,21 +73,22 @@ volumes = []
 pressures = []
 gammas = []
 
-# ofile.write(Function(problem.displacement,name = "u"),0.0)
-# ofile.write(problem.displacement, 0.0)
-with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
-    ofile.write_checkpoint(
-        problem.displacement,
-        "u",
-        0.0,
-        dolfin.XDMFFile.Encoding.HDF5,
-        True,
-    )
-logger.info(f"VOLUME = {problem.Vendo}")
-volumes.append(problem.Vendo)
-pressures.append(problem.pendo)
-gammas.append(problem.get_control_parameter("gamma"))
 
+def save(time_step):
+    with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
+        ofile.write_checkpoint(
+            problem.displacement,
+            "u",
+            time_step,
+            dolfin.XDMFFile.Encoding.HDF5,
+            True,
+        )
+    volumes.append(problem.Vendo)
+    pressures.append(problem.pendo)
+    gammas.append(problem.get_control_parameter("gamma"))
+
+
+save(0.0)
 
 itertarget(
     problem,
@@ -99,20 +100,7 @@ itertarget(
     data_collector=None,
     max_adapt_iter=max_adapt_iter,
 )
-
-# ofile.write(problem.displacement, 1.0)
-with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
-    ofile.write_checkpoint(
-        problem.displacement,
-        "u",
-        1.0,
-        dolfin.XDMFFile.Encoding.HDF5,
-        True,
-    )
-logger.info(f"VOLUME = {problem.Vendo}")
-volumes.append(problem.Vendo)
-pressures.append(problem.pendo)
-gammas.append(problem.get_control_parameter("gamma"))
+save(1.0)
 
 itertarget(
     problem,
@@ -124,20 +112,7 @@ itertarget(
     data_collector=None,
     max_adapt_iter=max_adapt_iter,
 )
-
-# ofile.write(problem.displacement, 1.0)
-with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
-    ofile.write_checkpoint(
-        problem.displacement,
-        "u",
-        2.0,
-        dolfin.XDMFFile.Encoding.HDF5,
-        True,
-    )
-logger.info(f"VOLUME = {problem.Vendo}")
-volumes.append(problem.Vendo)
-pressures.append(problem.pendo)
-gammas.append(problem.get_control_parameter("gamma"))
+save(2.0)
 
 # Isovolumic contraction. Adjusting gamma to reach aortic pressure
 
@@ -151,20 +126,7 @@ itertarget(
     data_collector=None,
     max_adapt_iter=max_adapt_iter,
 )
-
-# ofile.write(Function(problem.displacement, name="u"), 2.0)
-with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
-    ofile.write_checkpoint(
-        problem.displacement,
-        "u",
-        3.0,
-        dolfin.XDMFFile.Encoding.HDF5,
-        True,
-    )
-logger.info(f"VOLUME = {problem.Vendo}")
-volumes.append(problem.Vendo)
-pressures.append(problem.pendo)
-gammas.append(problem.get_control_parameter("gamma"))
+save(3.0)
 
 # Isotonic contraction. Adjusting gamma to reach gamma max
 
@@ -178,20 +140,7 @@ itertarget(
     data_collector=None,
     max_adapt_iter=max_adapt_iter,
 )
-
-# ofile.write(Function(problem.displacement, name="u"), 3.0)
-with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
-    ofile.write_checkpoint(
-        problem.displacement,
-        "u",
-        4.0,
-        dolfin.XDMFFile.Encoding.HDF5,
-        True,
-    )
-logger.info(f"VOLUME = {problem.Vendo}")
-volumes.append(problem.Vendo)
-pressures.append(problem.pendo)
-gammas.append(problem.get_control_parameter("gamma"))
+save(4.0)
 
 # Isovolumic relaxation. Adjusting gamma negatively to reach atrial pressure.
 
@@ -205,21 +154,7 @@ itertarget(
     data_collector=None,
     max_adapt_iter=max_adapt_iter,
 )
-
-
-# ofile.write(Function(problem.displacement, name="u"), 4.0)
-with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
-    ofile.write_checkpoint(
-        problem.displacement,
-        "u",
-        5.0,
-        dolfin.XDMFFile.Encoding.HDF5,
-        True,
-    )
-logger.info(f"VOLUME = {problem.Vendo}")
-volumes.append(problem.Vendo)
-pressures.append(problem.pendo)
-gammas.append(problem.get_control_parameter("gamma"))
+save(5.0)
 
 # Isotonic relaxation. Adjusting gamma negatively to reach zero active force.
 
@@ -233,20 +168,7 @@ itertarget(
     data_collector=None,
     max_adapt_iter=max_adapt_iter,
 )
-
-# ofile.write(Function(problem.displacement, name="u"), 5.0)
-with dolfin.XDMFFile("simple_pvloop.xdmf") as ofile:
-    ofile.write_checkpoint(
-        problem.displacement,
-        "u",
-        6.0,
-        dolfin.XDMFFile.Encoding.HDF5,
-        True,
-    )
-logger.info(f"VOLUME = {problem.Vendo}")
-volumes.append(problem.Vendo)
-pressures.append(problem.pendo)
-gammas.append(problem.get_control_parameter("gamma"))
+save(6.0)
 
 import matplotlib.pyplot as plt
 
