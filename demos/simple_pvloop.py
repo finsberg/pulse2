@@ -15,7 +15,8 @@ import cardiac_geometries
 # from pulse2.material import HolzapfelOgden, Guccione
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pulse2")
+logger.setLevel(logging.INFO)
 
 # We only want standard output on rank 0. We therefore set the log level to
 # ERROR on all other ranks
