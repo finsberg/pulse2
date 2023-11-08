@@ -89,9 +89,9 @@ class LVProblem(dolfin.NonlinearProblem):
         )
         if not self._first_iteration:
             logger.debug(
-                f"residual: {residual:e} "
-                + f"previous residual: {self._prev_residual:e} "
-                + f"ratio: {residual_ratio:e}"
+                f"\nresidual: {residual:e} "
+                + f"\nprevious residual: {self._prev_residual:e} "
+                + f"\nratio: {residual_ratio:e}"
             )
         self._prev_residual = residual
 

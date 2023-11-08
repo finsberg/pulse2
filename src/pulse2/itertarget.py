@@ -251,7 +251,12 @@ def itertarget(
     else:
         control_step = numpyfy(control_step)
 
-    logger.info(f"ITER TARGET {target_parameter} {target_end}")
+    logger.info(
+        f"Target parameter: {target_parameter}, "
+        f"\ntarget value: {target_value} "
+        f"\ntarget end: {target_end}, "
+        f"\ncontrol mode: {control_mode}"
+    )
 
     # Some flags
     target_reached = False
@@ -311,18 +316,13 @@ def itertarget(
 
         # Correction step
         # ---------------
-        logger.debug(
-            "\nTRYING NEW CONTROL VALUE: {}={}{}\ntarget: {}={}, "
-            'control parameter: "{}", control_mode: "{}"'.format(
-                control_parameter,
-                control_value,
-                " (iterating)" if iterating else "",
-                target_parameter,
-                target_end,
-                control_parameter,
-                control_mode,
-            )
-        )
+        msg = f"Trying new control value: {control_parameter}={control_value} "
+        if iterating:
+            msg += "(iterating) "
+        msg += f"\ntarget: {target_parameter}={target_end}, "
+        msg += f"\ncontrol_mode: {control_mode}"
+        logger.debug(msg)
+
         problem.set_control_parameters(**{control_parameter: control_value})
 
         try:
@@ -330,15 +330,17 @@ def itertarget(
             if not nlconv:
                 raise RuntimeError("Solver did not converge...")
         except RuntimeError:
-            logger.debug("\nNOT CONVERGING")
+            logger.debug("Not converging")
 
             # Reset solution
             reset_problem_state(problem=problem, state_old=state_old)
             control_value = control_value_old
 
             # Reduce step
+            msg = f"Reducing control_step from {control_step} "
             control_step *= 0.5
-            logger.debug(f"REDUCING control_step = {control_step}")
+            msg += f"to {control_step}"
+            logger.debug(msg)
             continue
 
         # Get target value
@@ -352,7 +354,7 @@ def itertarget(
             target_end=target_end,
             target_value_old=target_value_old,
         ):
-            logger.debug("STEPPING IN WRONG DIRECTION")
+            logger.debug("Stepping in the wrong direction")
 
             # Reset solution
             reset_problem_state(problem=problem, state_old=state_old)
@@ -366,15 +368,17 @@ def itertarget(
 
         # Adapt control_step
         if not iterating and nliter < max_adapt_iter and adapt_step:
+            msg = f"Increasing control_step from {control_step} "
             control_step *= 2.0
-            logger.debug(f"INCREASING control_step = {control_step}")
+            msg += f"to {control_step}"
+            logger.debug(msg)
 
         # Check if target has been reached
 
         if check_target_reached(target_value, target_end, tol):
-            target_str = f"TARGET REACHED {target_parameter} = {target_value}"
+            target_str = f"Target reached {target_parameter} = {target_value}"
             if target_parameter != control_parameter:
-                target_str += f" WITH {control_parameter} = {control_value}"
+                target_str += f" with {control_parameter} = {control_value}"
             logger.info(target_str)
             target_reached = True
 
@@ -393,7 +397,8 @@ def itertarget(
                 prev_states[-1].vector().axpy(1.0, problem.state.vector())
 
             logger.info(
-                f"SUCCESFULL STEP: pendo={problem.pendo:.3f} Vendo={problem.Vendo:.3f}"
+                f"Successful step: \ntarget value={target_value} "
+                f"\npendo={problem.pendo} \nVendo={problem.Vendo}"
             )
 
         # output

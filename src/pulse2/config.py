@@ -8,12 +8,9 @@ rank = comm.rank
 size = comm.size
 root = 0
 fancy_format = (
-    "%(asctime)s %(rank)s%(name)s - %(levelname)s - "
-    "%(message)s (%(filename)s:%(lineno)d)"
+    "%(asctime)s %(rank)s(%(filename)s:%(lineno)d) - %(levelname)s - " "%(message)s"
 )
-base_format = (
-    "%(asctime)s %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
-)
+base_format = "%(asctime)s (%(filename)s:%(lineno)d) - %(levelname)s - %(message)s"
 root_format = "ROOT -" + base_format
 
 
@@ -45,7 +42,7 @@ LOGGING_CONFIG = {
     "loggers": {
         "pulse2": {
             "handlers": ["console"],
-            "level": "DEBUG",
+            "level": "INFO",
             # Don't send it up my namespace for additional handling
             "propagate": False,
         },
