@@ -7,7 +7,7 @@ from scipy.interpolate import splev, splrep
 import logging
 from .solver import Solver
 from .problem import LVProblem, ControlMode
-from .exceptions import InvalidControl
+from . import exceptions
 
 
 __all__ = ["itertarget"]
@@ -35,6 +35,7 @@ def target_close(
     target_value: np.ndarray,
     control_step: np.ndarray,
     target_end: np.ndarray,
+    check_direction: bool = True,
 ) -> np.ndarray:
     new_control_step = np.zeros_like(control_step)
 
@@ -42,7 +43,7 @@ def target_close(
         # Next target value
         next_tv = tv + cs
 
-        if abs(next_tv - te) > abs(tv - te):
+        if check_direction and abs(next_tv - te) > abs(tv - te):
             # We are stepping in the wrong direction
             cs = -cs
             next_tv = tv + cs
@@ -74,6 +75,45 @@ def prediction_step(
 def reset_problem_state(problem: LVProblem, state_old: dolfin.Function):
     problem.state.vector().zero()
     problem.state.vector().axpy(1.0, state_old.vector())
+
+
+def get_new_control_value(
+    control_value: np.ndarray,
+    control_step: np.ndarray,
+    control_parameter: str,
+    min_control: np.ndarray | None = None,
+    max_control: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    new_control_step = control_step.copy()
+
+    # If we are close to the bounds we should not cross
+    if min_control is not None:
+        new_control_step = target_close(
+            target_value=control_value,
+            control_step=new_control_step,
+            target_end=min_control,
+            check_direction=False,
+        )
+    if max_control is not None:
+        new_control_step = target_close(
+            target_value=control_value,
+            control_step=new_control_step,
+            target_end=max_control,
+            check_direction=False,
+        )
+    # New control value
+    new_control_value = control_value + new_control_step
+
+    if np.allclose(new_control_step, 0.0):
+        # Control step is not changing - we have reached a bound
+        raise exceptions.ControlOutOfBounds(
+            control_parameter=control_parameter,
+            control_value=control_value,
+            min_control=min_control,
+            max_control=max_control,
+        )
+
+    return new_control_value, new_control_step
 
 
 def stepping_in_wrong_direction(
@@ -146,6 +186,9 @@ def itertarget(
     tol: float = 1e-6,
     adapt_step: float = True,
     max_adapt_iter: int = 7,
+    max_failures: int = 10,
+    min_control: float | list[float] | tuple[float] | np.ndarray | None = None,
+    max_control: float | list[float] | tuple[float] | np.ndarray | None = None,
 ) -> None:
     """Continuation of the control parameter by simple homotopy, i.e.
     the control is increased by control_step (and adapted) until the
@@ -199,7 +242,7 @@ def itertarget(
         control_parameter in ["pressure", "volume"]
         and control_parameter != control_mode.value
     ):
-        raise InvalidControl(
+        raise exceptions.InvalidControl(
             msg="Control mode and control parameter have to be the same.",
             target_parameter=target_parameter,
             control_mode=control_mode.value,
@@ -212,14 +255,14 @@ def itertarget(
                 "Expected target_parameter to be one of volume "
                 "or pressure if different from control parameter."
             )
-            raise InvalidControl(
+            raise exceptions.InvalidControl(
                 msg=msg,
                 target_parameter=target_parameter,
                 control_mode=control_mode.value,
                 control_parameter=control_parameter,
             )
         if target_parameter == control_mode.value:
-            raise InvalidControl(
+            raise exceptions.InvalidControl(
                 msg="Target parameter cannot be the same as the control mode.",
                 target_parameter=target_parameter,
                 control_mode=control_mode.value,
@@ -257,6 +300,10 @@ def itertarget(
         f"\ntarget end: {target_end}, "
         f"\ncontrol mode: {control_mode}"
     )
+    if min_control is not None:
+        min_control = numpyfy(min_control)
+    if max_control is not None:
+        max_control = numpyfy(max_control)
 
     # Some flags
     target_reached = False
@@ -267,6 +314,7 @@ def itertarget(
     prev_states = [problem.state.copy(True)]
 
     # The main loop
+    n_failures = 0
     iterating = False
     while not target_reached:
         first_step = len(target_values) < 2
@@ -300,9 +348,13 @@ def itertarget(
                     control_step=control_step,
                 )
 
-        # New control value
-        new_control_value = control_value + control_step
-        control_value = new_control_value
+        control_value, control_step = get_new_control_value(
+            control_value=control_value,
+            control_step=control_step,
+            min_control=min_control,
+            max_control=max_control,
+            control_parameter=control_parameter,
+        )
 
         # Prediction step
         # ---------------
@@ -334,6 +386,19 @@ def itertarget(
 
             # Reset solution
             reset_problem_state(problem=problem, state_old=state_old)
+
+            n_failures += 1
+            if n_failures >= max_failures:
+                raise exceptions.SolverDidNotConverge(
+                    target_end=target_end,
+                    target_value=target_value,
+                    control_step=control_step,
+                    control_mode=control_mode.value,
+                    control_parameter=control_parameter,
+                    n_failures=n_failures,
+                    control_value=control_value,
+                )
+
             control_value = control_value_old
 
             # Reduce step
@@ -342,6 +407,9 @@ def itertarget(
             msg += f"to {control_step}"
             logger.debug(msg)
             continue
+        else:
+            # Reset number of failures
+            n_failures = 0
 
         # Get target value
         target_value = numpyfy(problem.get_control_parameter(target_parameter))
