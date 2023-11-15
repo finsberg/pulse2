@@ -1,6 +1,7 @@
 from functools import lru_cache
 import math
 import pprint
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
 from typing import Callable
@@ -164,6 +165,10 @@ def rhs(
     )
 
 
+def kPa2mmHg(p: float) -> float:
+    return p * 7.50061683
+
+
 def main():
     heart_rate = 70
     # Number of seconds for 1 beat
@@ -176,11 +181,11 @@ def main():
     T = N * heart_cycle
 
     # Resistance in mitral valve
-    R_mitral_valve = 0.08782 * 0.13
+    R_mitral_valve = 0.08782
     # Resistance in aortic valve
-    R_aortic = 0.1 * 0.13
+    R_aortic = 0.1
     # Resistance in ?
-    R_p = 1.3 * 0.13
+    R_p = 1.3
     Ca = 1.601
     Cv = 1.894
 
@@ -208,7 +213,7 @@ def main():
         s0=geo.s0,
         n0=geo.n0,
     )
-    geo.mesh.coordinates()[:] /= 3
+    geo.mesh.coordinates()[:] *= 2 / 5
 
     material_params = pulse2.HolzapfelOgden.transversely_isotropic_parameters()
     material = pulse2.HolzapfelOgden(f0=geo.f0, s0=geo.s0, parameters=material_params)
@@ -229,12 +234,20 @@ def main():
 
     y0 = [
         geo.inner_volume(),  # Initial LV volume
-        13,  # Initial aortic pressure
-        0.8,  # Initial arterial pressure
+        96,  # Initial aortic pressure
+        6,  # Initial arterial pressure
     ]
 
+    params = default_parameters()
+    params["t_sys"] = 0.14
+    params["t_dias"] = 0.28
+    params["sigma_0"] = 300e3
+
     def act(t):
-        return float(activation_function((t - 0.1, t), t_eval=[t])) / 1000.0
+        return (
+            float(activation_function((t - 0.1, t), t_eval=[t], parameters=params))
+            / 1000.0
+        )
 
     volumes = []
     pressures = []
@@ -242,6 +255,7 @@ def main():
 
     @lru_cache
     def save(time_step):
+        logger.info(f"Save time step {time_step}")
         with dolfin.XDMFFile("circulation.xdmf") as ofile:
             ofile.write_checkpoint(
                 problem.displacement,
@@ -253,6 +267,9 @@ def main():
         volumes.append(problem.Vendo)
         pressures.append(problem.pendo)
         gammas.append(problem.get_control_parameter("gamma"))
+        fig, ax = plt.subplots()
+        ax.plot(volumes, pressures)
+        fig.savefig("pv_loop_circulation_3D.png")
 
     @lru_cache
     def lv_pressure_func(t, v_lv):
@@ -278,7 +295,7 @@ def main():
             data_collector=None,
         )
         save(t)
-        return problem.pendo
+        return kPa2mmHg(problem.pendo)
 
     solve_ivp(
         fun=rhs,
