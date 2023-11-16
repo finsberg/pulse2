@@ -1,6 +1,20 @@
-FROM ghcr.io/scientificcomputing/fenics-gmsh:2023-08-16
+# Use github pages for docker image
+FROM ghcr.io/scientificcomputing/example-paper-fenics:v0.1.6
 
-COPY . /app
-WORKDIR /app
+# Create user with a home directory
+ARG NB_USER
+ARG NB_UID=1000
+ENV USER ${NB_USER}
+ENV HOME /home/${NB_USER}
 
-RUN python3 -m pip install ".[demo]"
+# Copy current directory
+WORKDIR ${HOME}
+COPY . ${HOME}
+
+# Change ownership of home directory
+USER root
+RUN chown -R ${NB_UID} ${HOME}
+
+USER ${NB_USER}
+
+ENTRYPOINT []
