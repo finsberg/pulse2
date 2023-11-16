@@ -11,6 +11,12 @@
 
 `pulse2` is a FEniCS-based cardiac mechanics solver. It is in part inspired by [`fenics-pulse`](https://github.com/finsberg/pulse) and [`pulse`](https://bitbucket.org/peppu/pulse) but it created to make the transition to [`fenicsx-pulse`](https://github.com/finsberg/fenicsx-pulse) easier.
 
+## Install
+
+```
+python3 -m pip install fenics-pulse2
+```
+
 # Quickstart
 
 TBW
