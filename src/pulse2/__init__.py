@@ -1,7 +1,7 @@
 """Top-level package for fenicsx_pulse."""
 from importlib.metadata import metadata
 
-meta = metadata("pulse2")
+meta = metadata("fenics-pulse2")
 __version__ = meta["Version"]
 __author__ = meta["Author"]
 __license__ = meta["License"]

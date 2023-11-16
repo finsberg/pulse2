@@ -46,14 +46,14 @@ demo = [
 docs = [
    "jupyter-book",
    "jupytext",
-   "pulse2[demo]"
+   "fenics-pulse2[demo]"
 ]
 all = [
-   "pulse2[test]",
-   "pulse2[docs]",
-   "pulse2[pypi]",
-   "pulse2[demo]",
-   "pulse2[dev]"
+   "fenics-pulse2[test]",
+   "fenics-pulse2[docs]",
+   "fenics-pulse2[pypi]",
+   "fenics-pulse2[demo]",
+   "fenics-pulse2[dev]"
 ]
 
 
