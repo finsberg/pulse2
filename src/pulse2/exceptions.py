@@ -173,3 +173,39 @@ class InvalidMarker(KeyError, PulseException):
             f"Invalid marker {self.marker}. Possible options are "
             f"{self.valid_markers}"
         )
+
+
+@dataclass
+class SolverDidNotConverge(RuntimeError, PulseException):
+    target_end: np.ndarray
+    target_value: np.ndarray
+    control_parameter: str
+    control_mode: str
+    control_value: np.ndarray
+    control_step: np.ndarray
+    n_failures: int
+
+    def __str__(self) -> str:
+        return (
+            f"Solver failed after trying {self.n_failures} times. "
+            f"Target value: {self.target_value}. "
+            f"Target end: {self.target_end}. "
+            f"Control mode: {self.control_mode}. "
+            f"Control parameter: {self.control_parameter}. "
+            f"Control step: {self.control_step}. "
+        )
+
+
+@dataclass
+class ControlOutOfBounds(ValueError, PulseException):
+    control_parameter: str
+    control_value: np.ndarray
+    min_control: np.ndarray | None
+    max_control: np.ndarray | None
+
+    def __str__(self) -> str:
+        return (
+            f"Value of control parameter {self.control_parameter} is "
+            f"out of bounds with value {self.control_value} and "
+            f"bounds: ({self.min_control}, {self.max_control})"
+        )
